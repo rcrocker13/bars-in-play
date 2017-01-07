@@ -13,6 +13,7 @@ var padding = {top: 40, right: 60, bottom: 40, left: 80}
   , rungaps = d3.scaleOrdinal()
         .domain(["LD", "LC", "LB", "LA/RA", "RB", "RC", "RD"])
         .range(["7", "5", "3", "1/2", "4", "6", "8"])
+        .unknown(null)
 ;
 
 var canvas = d3.select("#chart").append("svg")
@@ -23,7 +24,7 @@ var canvas = d3.select("#chart").append("svg")
 
 d3.queue()
     .defer(d3.csv, "data/run-gap.csv", preprocess)
-    .defer(d3.csv, "data/og-data.csv")
+    .defer(d3.csv, "data/og-data.csv", processrow)
     .await(main_function)
 ;
 
@@ -31,22 +32,35 @@ function preprocess(row) {
     row.count = +row.count;
     row.avgSuccess = +row.avgSuccess;
     row.expSuccess = +row.expSuccess;
+
+    // MUST do this!
     return row;
-}
+} // preprocess()
+
+function processrow(row) {
+    row.success = row["Success?"] === "Yes" ? 1 : 0;
+
+    row.success_resid = row.success - 0.432;
+    row.expected_resid = row.success - row.ExpectedEP;
+
+    // MUST do this!
+    return row;
+} // processrow()
 
 function main_function(error, data, og) {
     if (error) throw error;
 
-    console.log(og);
     // arrange the data in a hierarchy by:
     var opponents = d3.nest()
         // Opposing team name
         .key(function(d) { return d.Defense; })
         // Run direction
         .key(function(d) { return d.RunDir; })
-        // Filter dataset of nulls, "Trick Play"s & "Wide Receiver <something>"s
+        // First, filter dataset of nulls, "Trick Play"s, etc
         .map(og.filter(function(d) { return rungaps(d.RunDir); }))
     ;
+    console.log(data, og, opponents);
+
     // Populate the select box with the team name
     var opt = d3.select("#opponent")
         .append("optgroup")
