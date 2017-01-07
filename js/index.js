@@ -15,16 +15,17 @@ var padding = {top: 40, right: 60, bottom: 40, left: 80}
         .range(["7", "5", "3", "1/2", "4", "6", "8"])
         .unknown(null)
   , colorExtents = {
-          average: []
-        , expected: []
+          success_resid: []
+        , expected_resid: []
       }
 ;
-
 var canvas = d3.select("#chart").append("svg")
     .attr("height", height + padding.top + padding.bottom)
     .attr("width", width + padding.left + padding.right)
   .append("g")
-    .attr("transform", "translate(" + padding.left + ", " + padding.top + ")");
+    .attr("transform", "translate(" + padding.left + ", " + padding.top + ")")
+;
+
 
 d3.queue()
     .defer(d3.csv, "data/og-data.csv", preprocess)
@@ -32,17 +33,20 @@ d3.queue()
 ;
 
 function preprocess(row) {
-  row.success = row["Success?"] === "Yes" ? 1 : 0;
+    row.success = row["Success?"] === "Yes" ? 1 : 0;
 
-  row.success_resid  = row.success - 0.432;
-  row.expected_resid = row.success - row.ExpectedEP;
+    row.success_resid  = row.success - 0.432;
+    row.expected_resid = row.success - row.ExpectedEP;
 
-  // MUST do this!
-  return row;
+    // MUST do this!
+    return row;
 } // preprocess()
 
 function main_function(error, data) {
     if (error) throw error;
+
+    colorExtents.success_resid = d3.extent(data, function(d) { return d.success_resid; });
+    colorExtents.expected_resid = d3.extent(data, function(d) { return d.expected_resid; });
 
     // arrange the data in a hierarchy by:
     var opponents = d3.nest()
@@ -53,7 +57,6 @@ function main_function(error, data) {
         // First, filter dataset of nulls, "Trick Play"s, etc
         .map(data.filter(function(d) { return rungaps(d.RunDir); }))
     ;
-    console.log(data, opponents);
 
     // Populate the select box with the team name
     var opt = d3.select("#opponent")
@@ -68,27 +71,12 @@ function main_function(error, data) {
     ;
     d3.select("#opponent")
         .on("change", function() {
-            update_data(opponents.get(this.value));
+            update(opponents.get(this.value));
           })
-    ;
-    var selectedOption
-      , colorExtent = []
     ;
     d3.select("#color")
         .on("change", function() {
-            selectedOption = this.value;
-            colorExtent = d3.extent(data, function(d) {
-                return d[selectedOption];
-              })
-            ;
-            colorScale
-                .domain(colorExtent)
-            ;
-            d3.selectAll("rect")
-                .style("fill", function(d) {
-                    return d3.interpolateWarm(colorScale(d[selectedOption]));
-                  })
-
+            update_colors(this.value);
           })
     ;
     /*
@@ -107,15 +95,14 @@ function main_function(error, data) {
     /*
     ** Initialize the visualization
     */
-    update_data(opponents.get(d3.select("#opponent").node().value));
+    update(opponents.get(d3.select("#opponent").node().value));
   } // main_function()
 
-function update_data(data) {
+function update(data) {
     console.log(data);
-    colorScale
-        .range([0, 1])
-        .domain(d3.extent(d3.merge(data.values()), function(d) { return d.success_resid; }))
-    ;
+    var selectedColor = d3.select("#color").node().value;
+    colorScale.domain(colorExtents[selectedColor]);
+
     x
         .domain(rungaps.range())
     ;
@@ -127,7 +114,7 @@ function update_data(data) {
     var bar = canvas.selectAll(".bar")
         .data(data.entries(), function(d) { return d.key; })
     ;
-    bar = bar.enter()
+    bar.enter()
       .append("rect")
         // class our rects to .bar so the selection can find their target
         .attr("class", "bar")
@@ -143,14 +130,16 @@ function update_data(data) {
           })
         .attr("height", 0)
       .merge(bar)
-    ;
-    bar
       .transition()
         .attr("y", function(d) {
             return y(d.value.length);
           })
         .attr("height", function(d) {
             return height - y(d.value.length);
+          })
+        .style("fill", function(d) {
+            var mean = d3.mean(d.value, function(v) { return v[selectedColor]; });
+            return d3.interpolateWarm(colorScale(mean));
           })
     ;
     d3.select(".axis--x")
@@ -163,6 +152,21 @@ function update_data(data) {
     ;
     bar.exit()
       .transition()
+        .attr("y", y(0))
         .attr("height", 0)
     ;
-} // update_data()
+    //update_colors(d3.select("#color").node().value);
+} // update()
+
+function update_colors(selectedOption) {
+    colorScale.domain(colorExtents[selectedOption]);
+
+    d3.selectAll("rect")
+      .transition()
+        .style("fill", function(d) {
+            var mean = d3.mean(d.value, function(v) { return v[selectedOption]; });
+            return d3.interpolateWarm(colorScale(mean));
+          })
+
+    ;
+} // update_colors()xf
