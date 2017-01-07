@@ -83,7 +83,6 @@ function main_function(error, data, og) {
     canvas.append("g")
         .call(yAxis)
     ;
-    d3.select("#chart").call(BarChart());
     var bar = canvas.selectAll(".bar")
         .data(data)
     ;
