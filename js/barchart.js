@@ -18,6 +18,7 @@ function BarChart() {
             .range([height, 0])
       , yAxis = d3.axisLeft(y)
       , labeller
+      , dispatch
     ;
     /*
     ** Main Function Object
@@ -65,6 +66,7 @@ function BarChart() {
     ** Private Helper Functions
     */
     function update() {
+        console.log(data);
         x.domain(xDomain || data.keys().sort(d3.ascending));
 
         var max = d3.max(data.values(), function(d) { return d.count; });
@@ -82,7 +84,10 @@ function BarChart() {
             .attr("y", function(d) { return y(0); })
             .attr("height", 0)
           .merge(bar)
+            .on("click", function(d) { dispatch.call(title, this, d.key); })
           .transition()
+            .attr("x", function(d) { return x(labeller(d.key)); })
+            .attr("width", x.bandwidth())
             .attr("y", function(d) { return y(d.value.count); })
             .attr("height", function(d) { return height - y(d.value.count); })
             .style("fill", function(d) {
@@ -143,6 +148,13 @@ function BarChart() {
         return my;
       } // my.labeller()
     ;
+    my.connect = function(_) {
+        if(!arguments.length) return dispatch;
+        dispatch = _;
+        return my;
+      } // my.connect()
+    ;
+
     // This is ALWAYS the last thing returned
     return my;
 } // function object BarChart()
