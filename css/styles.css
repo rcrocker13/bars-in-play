@@ -6,6 +6,14 @@
   stroke: #ccc;
 
 }
+rect {
+    transition: fill-opacity .5s linear;
+}
 .bar {
   cursor: pointer;
+}
+
+.subdued {
+    fill-opacity: 0.1;
+    cursor: default;
 }
