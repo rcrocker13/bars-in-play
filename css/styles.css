@@ -15,3 +15,7 @@ svg {
 .axis line, .axis path {
   stroke: #ccc;
 }
+
+.chart {
+  width: 50%;
+}
