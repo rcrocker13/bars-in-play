@@ -84,7 +84,10 @@ function BarChart() {
             .attr("y", function(d) { return y(0); })
             .attr("height", 0)
           .merge(bar)
-            .on("click", function(d) { dispatch.call(title, this, d.key); })
+            .on("click", function(d) {
+                if(!d3.select(this).classed("subdued"))
+                    dispatch.call(title, this, d.key);
+              })
           .transition()
             .attr("x", function(d) { return x(labeller(d.key)); })
             .attr("width", x.bandwidth())
@@ -141,6 +144,19 @@ function BarChart() {
         update();
         return my;
      } // my.update()
+    ;
+    my.hilite = function(_) {
+        if(!arguments.length || !_) {
+            canvas.selectAll(".subdued")
+                .classed("subdued", false)
+            ;
+        } else {
+            canvas.selectAll(".bar")
+                .classed("subdued", function(d) { return d.key !== _; })
+            ;
+        }
+        return my;
+      } // my.hilite()
     ;
     my.labeller = function(_) {
         if(!arguments.length) return labeller;
