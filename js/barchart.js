@@ -6,31 +6,38 @@ function BarChart() {
       , margin
       , data
       , title
-      , padding = {top: 40, right: 60, bottom: 40, left: 80}
+      , padding = {top: 60, right: 20, bottom: 60, left: 40}
       , height = 200
       , width = 200
       , x = d3.scaleBand()
             .range([0, width])
             .paddingInner(0.1)
-      , y = d3.scaleLinear()
-            .range([height, 0 ])
+      , xDomain
       , xAxis = d3.axisBottom(x)
+      , y = d3.scaleLinear()
+            .range([height, 0])
       , yAxis = d3.axisLeft(y)
+      , labeller
     ;
     /*
     ** Main Function Object
     */
     function my(sel) {
         title = title || "barchart" + Math.round(Math.random() * 10000);
-        var svg = sel.selectAll("svg")
-            .data([1], function(d) { return d; })
+
+        var w = width + padding.left + padding.right
+          , h = height + padding.top + padding.bottom
+          , svg = sel.selectAll("svg")
+              .data([1], function(d) { return d; })
         ;
         svg = svg.enter()
           .append("svg")
             .style("width",  "100%")
             .style("height", "100%")
-            .attr("height", height + padding.top + padding.bottom)
-            .attr("width", width + padding.left + padding.right)
+            .attr("width", w)
+            .attr("height", h)
+            .attr("viewBox", [0, 0, w, h].join(' '))
+            .attr("preserveAspectRatio", "xMidYMid")
           .each(function(d) {
               d3.select(this)
                 .append("title")
@@ -46,7 +53,7 @@ function BarChart() {
         canvas.append("g")
             .attr("class", "axis axis--x")
             .attr("transform", "translate(0, " + height + ")")
-            .call(xAxis.scale(x)) // this axis won't change
+            .call(xAxis) // this axis won't change
         ;
         canvas.append("g")
             .attr("class", "axis axis--y")
@@ -58,6 +65,11 @@ function BarChart() {
     ** Private Helper Functions
     */
     function update() {
+        x.domain(xDomain || data.keys().sort(d3.ascending));
+
+        var max = d3.max(data.values(), function(d) { return d.count; });
+        y.domain([0, max]);
+
         var bar = canvas.selectAll(".bar")
             .data(data.entries(), function(d) { return d.key; })
         ;
@@ -65,9 +77,7 @@ function BarChart() {
           .append("rect")
             // class our rects to .bar so the selection can find their target
             .attr("class", "bar")
-            .attr("x", function(d, i) {
-                return x(rungaps(d.key));
-              })
+            .attr("x", function(d) { return x(labeller(d.key)); })
             .attr("width", x.bandwidth())
             .attr("y", function(d) { return y(0); })
             .attr("height", 0)
@@ -79,13 +89,17 @@ function BarChart() {
                 return d3.interpolateWarm(colorScale(d.value.avgSuccess));
               })
         ;
-        d3.select(".axis--y")
+        canvas.select(".axis--y")
           .transition()
             .call(yAxis.scale(y))
         ;
-        d3.select(".axis--x")
+        canvas.select(".axis--x")
           .transition()
             .call(xAxis.scale(x))
+        ;
+        canvas.select(".axis--x").selectAll(".tick > text")
+            .attr("transform", "rotate(-20)")
+            .attr("text-anchor", "end")
         ;
         bar.exit()
           .transition()
@@ -105,18 +119,16 @@ function BarChart() {
       } // my.title()
     ;
     my.xdomain = function(_) {
-        if(!arguments.length) return x.domain();
-        x.domain(_);
+        if(!arguments.length) return xDomain;
+
+        xDomain = _;
         return my;
       } // my.xdomain()
     ;
     my.data = function(_) {
         if(!arguments.length) return data;
         data = _;
-        var max = d3.max(data.values(), function(d) { return d.count; });
-        y
-            .domain([0, max])
-        ;
+
         return my;
       } // my.data()
     ;
@@ -124,6 +136,12 @@ function BarChart() {
         update();
         return my;
      } // my.update()
+    ;
+    my.labeller = function(_) {
+        if(!arguments.length) return labeller;
+        labeller = _;
+        return my;
+      } // my.labeller()
     ;
     // This is ALWAYS the last thing returned
     return my;
