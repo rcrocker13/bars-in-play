@@ -88,7 +88,15 @@ function main_function(error, data) {
                 .update()
             ;
           })
-        .on("reads", function(arg) { console.log(arg); })
+        .on("reads", function(arg) {
+            filters.reads = filters.reads === arg ? null : arg;
+
+            chartRungap
+                .data(rundirsify(opponents.get(d3.select("#opponent").node().value)))
+                .update()
+            ;
+          })
+    ;
 } // main_function()
 
 
@@ -111,7 +119,7 @@ function nestify(key) {
 
 function rundirsify(data) {
     return nestify(function(d) { return d.RunDir; })
-        .map(data.filter(function(d) { return filters.reads ? d.PostReads === filters.reads : true; }))
+        .map(data.filter(function(d) { return filters.reads ? d.PostRead1 === filters.reads : true; }))
     ;
 } // rundirsify()
 
