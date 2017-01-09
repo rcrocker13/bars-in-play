@@ -7,7 +7,8 @@ var rungaps = d3.scaleOrdinal()
         , expSuccess: []
       }
   , colorScale = d3.scaleLinear()
-  , chartRungap = BarChart().xdomain(rungaps.range())
+  , chartRungap = BarChart()
+  , chartReads = BarChart()
 ;
 
 
@@ -82,7 +83,9 @@ function main_function(error, data) {
         .text(function(d) { return d; })
     ;
     d3.select("#opponent")
-        .on("change", function() { update(opponents.get(this.value).rundirs); })
+        .on("change", function() {
+            update(opponents.get(this.value));
+          })
     ;
     d3.select("#color")
         .on("change", function() { update_colors(this.value); })
@@ -91,12 +94,15 @@ function main_function(error, data) {
     ** Set up the initial svg
     */
     d3.select("#chart-rungap")
-        .call(chartRungap)
+        .call(chartRungap.xdomain(rungaps.range()).labeller(rungaps))
+    ;
+    d3.select("#chart-reads")
+        .call(chartReads.labeller(function(d) { return d || "None"; }))
     ;
     /*
     ** Initialize the visualization
     */
-    update(opponents.get(d3.select("#opponent").node().value).rundirs);
+    update(opponents.get(d3.select("#opponent").node().value));
     console.log(data, opponents);
 } // main_function()
 
@@ -104,7 +110,11 @@ function update(data) {
     var selectedColor = d3.select("#color").node().value;
     colorScale.domain(colorExtents[selectedColor]);
     chartRungap
-        .data(data)
+        .data(data.rundirs)
+        .update()
+    ;
+    chartReads
+        .data(data.reads)
         .update()
     ;
 } // update()
