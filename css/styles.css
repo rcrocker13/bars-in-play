@@ -1,21 +1,7 @@
-body {
-  background-color: #ccc;
-}
-
-svg {
-  background-color: #fff;
-  display: block;
-  margin: 0 auto;
-}
-
 .axis text {
   fill: #444;
 }
 
 .axis line, .axis path {
   stroke: #ccc;
-}
-
-.chart {
-  width: 50%;
 }
