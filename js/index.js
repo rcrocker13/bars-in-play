@@ -7,8 +7,13 @@ var rungaps = d3.scaleOrdinal()
         , expSuccess: []
       }
   , colorScale = d3.scaleLinear()
-  , chartRungap = BarChart()
-  , chartReads = BarChart()
+  , signal = d3.dispatch("rungaps", "reads")
+  , chartRungap = BarChart().title("rungaps").connect(signal)
+  , chartReads = BarChart().title("reads").connect(signal)
+  , filters = {
+          rungaps: null
+        , reads: null
+      }
 ;
 
 
@@ -30,9 +35,6 @@ function preprocess(row) {
 function main_function(error, data) {
     if (error) throw error;
 
-    function success_resid(l) { return l.success_resid; }
-    function expected_resid(l) { return l.expected_resid; }
-
     colorExtents.avgSuccess = d3.extent(data, success_resid);
     colorExtents.expSuccess = d3.extent(data, expected_resid);
 
@@ -40,37 +42,10 @@ function main_function(error, data) {
     var opponents = d3.nest()
         // Opposing team name
         .key(function(d) { return d.Defense; })
-        // Run direction
-        // Populate with only the data we need
-        .rollup(function(leaves) {
-              return {
-                  rundirs: d3.nest()
-                      .key(function(d) { return d.RunDir; })
-                      .rollup(function(leaves) {
-                          return {
-                              count: leaves.length
-                            , avgSuccess: d3.mean(leaves, success_resid)
-                            , expSuccess: d3.mean(leaves, expected_resid)
-                            , plays: leaves
-                          };
-                        })
-                      .map(leaves)
-                , reads: d3.nest()
-                      .key(function(d) { return d.PostRead1; })
-                      .rollup(function(leaves) {
-                          return {
-                              count: leaves.length
-                            , avgSuccess: d3.mean(leaves, success_resid)
-                            , expSuccess: d3.mean(leaves, expected_resid)
-                            , plays: leaves
-                          };
-                        })
-                      .map(leaves)
-              };
-          })
         // But first, filter dataset of nulls, "Trick Play"s, etc
         .map(data.filter(function(d) { return rungaps(d.RunDir); }))
     ;
+
     // Populate the select box with the team name
     var opt = d3.select("#opponent")
         .append("optgroup") //enhance UX
@@ -103,18 +78,58 @@ function main_function(error, data) {
     ** Initialize the visualization
     */
     update(opponents.get(d3.select("#opponent").node().value));
-    console.log(data, opponents);
+
+    signal
+        .on("rungaps", function(arg) {
+            filters.rungaps = filters.rungaps === arg ? null : arg;
+
+            chartReads
+                .data(readsify(opponents.get(d3.select("#opponent").node().value)))
+                .update()
+            ;
+          })
+        .on("reads", function(arg) { console.log(arg); })
 } // main_function()
+
+
+function success_resid(l) { return l.success_resid; }
+function expected_resid(l) { return l.expected_resid; }
+
+function nestify(key) {
+    return d3.nest()
+        .key(key)
+        .rollup(function(leaves) {
+            return {
+                count: leaves.length
+              , avgSuccess: d3.mean(leaves, success_resid)
+              , expSuccess: d3.mean(leaves, expected_resid)
+              , plays: leaves
+            };
+          })
+    ;
+} // nestify()
+
+function rundirsify(data) {
+    return nestify(function(d) { return d.RunDir; })
+        .map(data.filter(function(d) { return filters.reads ? d.PostReads === filters.reads : true; }))
+    ;
+} // rundirsify()
+
+function readsify(data) {
+    return nestify(function(d) { return d.PostRead1; })
+        .map(data.filter(function(d) { return filters.rungaps ? d.RunDir === filters.rungaps : true; }))
+    ;
+} // readsify()
 
 function update(data) {
     var selectedColor = d3.select("#color").node().value;
     colorScale.domain(colorExtents[selectedColor]);
     chartRungap
-        .data(data.rundirs)
+        .data(rundirsify(data))
         .update()
     ;
     chartReads
-        .data(data.reads)
+        .data(readsify(data))
         .update()
     ;
 } // update()
