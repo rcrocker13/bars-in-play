@@ -82,18 +82,28 @@ function main_function(error, data) {
     signal
         .on("rungaps", function(arg) {
             filters.rungaps = filters.rungaps === arg ? null : arg;
+            filters.reads = filters.rungaps ? null : filters.reads;
 
             chartReads
                 .data(readsify(opponents.get(d3.select("#opponent").node().value)))
+                .hilite(filters.reads)
                 .update()
+            ;
+            chartRungap
+                .hilite(filters.rungaps)
             ;
           })
         .on("reads", function(arg) {
             filters.reads = filters.reads === arg ? null : arg;
+            filters.rungaps = filters.reads ? null: filters.rungaps;
 
             chartRungap
                 .data(rundirsify(opponents.get(d3.select("#opponent").node().value)))
+                .hilite(filters.rungaps)
                 .update()
+            ;
+            chartReads
+                .hilite(filters.reads)
             ;
           })
     ;
